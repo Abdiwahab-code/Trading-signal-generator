@@ -26,7 +26,6 @@ def get_trading_signals():
         {"signal": "Sell GBP/USD", "price": 1.3450},
         {"signal": "Buy USD/JPY", "price": 110.50}
     ]
-    
     return jsonify(signals)  # Return the list of signals as JSON
 
 @app.route('/predict', methods=['POST'])
