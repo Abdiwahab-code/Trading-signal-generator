@@ -18,6 +18,17 @@ CORS(app)  # Enable CORS for cross-origin requests
 def home():
     return jsonify({"message": "Forex Trading Signal API is Running!"})
 
+@app.route('/api/get-trading-signals', methods=['GET'])
+def get_trading_signals():
+    # Simulate some trading signals (You can modify this with actual data)
+    signals = [
+        {"signal": "Buy EUR/USD", "price": 1.2100},
+        {"signal": "Sell GBP/USD", "price": 1.3450},
+        {"signal": "Buy USD/JPY", "price": 110.50}
+    ]
+    
+    return jsonify(signals)  # Return the list of signals as JSON
+
 @app.route('/predict', methods=['POST'])
 def predict():
     if model is None:
