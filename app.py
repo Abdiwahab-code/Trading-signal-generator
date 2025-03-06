@@ -3,15 +3,28 @@ from flask_cors import CORS
 import joblib
 import numpy as np
 import time
+import os
+import gdown
 from twelvedata import TDClient
 
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)  # Enable CORS for cross-origin requests
 
+# Google Drive File ID
+FILE_ID = "1x-ZeuGxIFn_3ozqe98wp7bLoKC7h_S6S"
+MODEL_PATH = "new_forex_model_twelvedata.pkl"
+
+# Download the model if not already present
+if not os.path.exists(MODEL_PATH):
+    url = f"https://drive.google.com/uc?id={FILE_ID}"
+    print("Downloading model from Google Drive...")
+    gdown.download(url, MODEL_PATH, quiet=False)
+
 # Load the trained model
 try:
-    model = joblib.load("new_forex_model_twelvedata.pkl")
+    model = joblib.load(MODEL_PATH)
+    print("Model loaded successfully!")
 except Exception as e:
     print(f"Error loading model: {e}")
     model = None  # Avoid crashing if model isn't found
@@ -92,6 +105,5 @@ def get_trading_signals():
     return jsonify(signals)
 
 if __name__ == '__main__':
-    import os
     port = int(os.environ.get("PORT", 5000))  # Dynamic port for deployment
     app.run(debug=True, host='0.0.0.0', port=port)
