@@ -30,7 +30,7 @@ except Exception as e:
     model = None  # Avoid crashing if model isn't found
 
 # Set up Twelve Data API client
-API_KEY = "c4755b2a48af47e498144d182962c441"
+API_KEY = "83d6a28890304e40b220b588e5e8359e"
 td = TDClient(apikey=API_KEY)
 
 # Define currency pairs and timeframes
@@ -62,7 +62,7 @@ def fetch_live_forex_data():
 def home():
     return jsonify({"message": "Forex Trading Signal API is Running!"})
 
-@app.route('/api/get-trading-signals', methods=['GET'])
+@app.route('/api/predict', methods=['GET'])
 def get_trading_signals():
     # Fetch live forex data
     live_prices = fetch_live_forex_data()
