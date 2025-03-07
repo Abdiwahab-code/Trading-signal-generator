@@ -25,6 +25,7 @@ if not os.path.exists(MODEL_PATH):
 try:
     model = joblib.load(MODEL_PATH)
     print("Model loaded successfully!")
+    print("Expected features:", model.feature_names_in_)  # Debugging step
 except Exception as e:
     print(f"Error loading model: {e}")
     model = None  # Avoid crashing if model isn't found
@@ -50,7 +51,9 @@ def fetch_live_forex_data():
                     forex_data[pair][tf] = {
                         "close": round(latest["close"], 5),
                         "high": round(latest["high"], 5),
-                        "low": round(latest["low"], 5)
+                        "low": round(latest["low"], 5),
+                        "volume": round(latest.get("volume", 0), 2),  # Default to 0 if missing
+                        "open": round(latest.get("open", 0), 5)  # Default to 0 if missing
                     }
             except Exception as e:
                 print(f"Error fetching {pair} at {tf}: {e}")
@@ -73,8 +76,10 @@ def get_trading_signals():
             if data is None:
                 continue  # Skip if no data
 
-            # Prepare feature set for prediction
-            features = np.array([data["close"], data["high"], data["low"]]).reshape(1, -1)
+            # Ensure correct feature set
+            expected_features = list(model.feature_names_in_)
+            input_features = [data.get(f, 0) for f in expected_features]  # Default missing ones to 0
+            features = np.array(input_features).reshape(1, -1)
             
             if model:
                 prediction = model.predict(features)[0]
