@@ -13,7 +13,7 @@ CORS(app)  # Enable CORS for cross-origin requests
 
 # Google Drive File ID
 FILE_ID = "1x-ZeuGxIFn_3ozqe98wp7bLoKC7h_S6S"
-MODEL_PATH = "new_forex_model_twelvedata.pkl"
+MODEL_PATH = "forex_trading_model.pkl"
 
 # Download the model if not already present
 if not os.path.exists(MODEL_PATH):
@@ -35,7 +35,7 @@ td = TDClient(apikey=API_KEY)
 
 # Define currency pairs and timeframes
 currency_pairs = ["EUR/USD", "GBP/USD", "USD/JPY", "USD/CHF", "AUD/USD", "USD/CAD"]
-timeframes = ["1min","5min", "15min","30min" "1h"]
+timeframes = ["1min", "5min", "15min", "30min", "1h"]
 
 # Function to fetch live forex data
 def fetch_live_forex_data():
