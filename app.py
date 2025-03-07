@@ -35,7 +35,7 @@ td = TDClient(apikey=API_KEY)
 
 # Define currency pairs and timeframes
 currency_pairs = ["EUR/USD", "GBP/USD", "USD/JPY", "USD/CHF", "AUD/USD", "USD/CAD"]
-timeframes = ["5min", "15min", "1h"]
+timeframes = ["1min","5min", "15min","30min" "1h"]
 
 # Function to fetch live forex data
 def fetch_live_forex_data():
