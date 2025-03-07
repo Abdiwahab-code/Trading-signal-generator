@@ -6,6 +6,7 @@ import time
 import os
 import gdown
 from twelvedata import TDClient
+import logging
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -25,7 +26,6 @@ if not os.path.exists(MODEL_PATH):
 try:
     model = joblib.load(MODEL_PATH)
     print("Model loaded successfully!")
-    print("Expected features:", model.feature_names_in_)  # Debugging step
 except Exception as e:
     print(f"Error loading model: {e}")
     model = None  # Avoid crashing if model isn't found
@@ -45,21 +45,33 @@ def fetch_live_forex_data():
         forex_data[pair] = {}
         for tf in timeframes:
             try:
-                data = td.time_series(symbol=pair, interval=tf, outputsize=1, timezone="UTC").as_pandas()
+                data = td.time_series(symbol=pair, interval=tf, outputsize=60, timezone="UTC").as_pandas()
                 if not data.empty:
-                    latest = data.iloc[-1]
-                    forex_data[pair][tf] = {
-                        "close": round(latest["close"], 5),
-                        "high": round(latest["high"], 5),
-                        "low": round(latest["low"], 5),
-                        "volume": round(latest.get("volume", 0), 2),  # Default to 0 if missing
-                        "open": round(latest.get("open", 0), 5)  # Default to 0 if missing
-                    }
+                    forex_data[pair][tf] = data
             except Exception as e:
-                print(f"Error fetching {pair} at {tf}: {e}")
-                forex_data[pair][tf] = None  # Handle errors gracefully
-            time.sleep(1)  # Prevent API rate limit issues
+                logging.error(f"Error fetching {pair} at {tf}: {e}")
+                forex_data[pair][tf] = None
+            time.sleep(1)
     return forex_data
+
+# Function to prepare data and generate signals
+def generate_signal(model, data, symbol, interval):
+    if data is None or data.empty:
+        return None
+    
+    # Ensure the model receives correct feature set
+    expected_features = model.feature_names_in_
+    latest_data = data.iloc[-1]
+    input_features = np.array([latest_data.get(f, 0) for f in expected_features]).reshape(1, -1)
+    
+    # Generate prediction
+    prediction = model.predict(input_features)[0]
+    signal = "Buy" if prediction == 1 else "Sell"
+    entry_price = round(latest_data["close"], 5)
+    stop_loss = round(entry_price * 0.995, 5) if signal == "Buy" else round(entry_price * 1.005, 5)
+    take_profit = round(entry_price * 1.005, 5) if signal == "Buy" else round(entry_price * 0.995, 5)
+    
+    return symbol, interval, signal, entry_price, stop_loss, take_profit
 
 @app.route('/')
 def home():
@@ -67,45 +79,22 @@ def home():
 
 @app.route('/api/predict', methods=['GET'])
 def get_trading_signals():
-    # Fetch live forex data
-    live_prices = fetch_live_forex_data()
+    live_data = fetch_live_forex_data()
     signals = []
     
-    for pair, time_frames in live_prices.items():
-        for tf, data in time_frames.items():
-            if data is None:
-                continue  # Skip if no data
-
-            # Ensure correct feature set
-            expected_features = list(model.feature_names_in_)
-            input_features = [data.get(f, 0) for f in expected_features]  # Default missing ones to 0
-            features = np.array(input_features).reshape(1, -1)
-            
-            if model:
-                prediction = model.predict(features)[0]
-                confidence = round(max(model.predict_proba(features)[0]), 2) if hasattr(model, "predict_proba") else None
-            else:
-                prediction, confidence = "Unknown", None
-            
-            # Interpret prediction
-            signal = "Buy" if prediction == 1 else "Sell"
-            
-            # Calculate Stop Loss & Take Profit
-            stop_loss = round(data["close"] * 0.995, 5) if signal == "Buy" else round(data["close"] * 1.005, 5)
-            take_profit = round(data["close"] * 1.005, 5) if signal == "Buy" else round(data["close"] * 0.995, 5)
-            
-            # Append result
-            signals.append({
-                "currency_pair": pair,
-                "time_frame": tf,
-                "signal": signal,
-                "price": data["close"],
-                "high": data["high"],
-                "low": data["low"],
-                "stop_loss": stop_loss,
-                "take_profit": take_profit,
-                "confidence": confidence
-            })
+    for symbol, timeframes_data in live_data.items():
+        for interval, data in timeframes_data.items():
+            result = generate_signal(model, data, symbol, interval)
+            if result:
+                symbol, interval, signal, entry_price, stop_loss, take_profit = result
+                signals.append({
+                    "currency_pair": symbol,
+                    "time_frame": interval,
+                    "signal": signal,
+                    "entry_price": entry_price,
+                    "stop_loss": stop_loss,
+                    "take_profit": take_profit
+                })
     
     return jsonify(signals)
 
